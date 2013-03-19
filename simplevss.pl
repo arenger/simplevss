@@ -1,8 +1,7 @@
 #!/usr/bin/perl
-use lib '/Users/arenger/perl5/lib/perl5';
 use strict;
 use warnings;
-use LWP::UserAgent 6.05;
+use LWP::UserAgent;
 use MIME::Base64;
 use JSON;
 use constant VSS_TODAY => 'VssToday';
@@ -80,10 +79,18 @@ sub tagNotes() {
    my $index = getNoteIndex();
    for my $meta (@$index) {
       #printf("checking %s\n",$meta->{'key'});
+      my %tagSubset;
       for my $tag (@{$meta->{'tags'}}) {
          next if !$tags{$tag};
          #printf("  has tag: $tag\n");
-         if ( $now > ($meta->{'modifydate'} + $tags{$tag}) ) {
+         $tagSubset{$tag} = 1;
+      }
+      next if $tagSubset{VSS_TODAY};
+      for my $tag (keys(%tagSubset)) {
+         my $then = $meta->{'modifydate'};
+         $then -= ($then % 86400);
+         $then += $tags{$tag};
+         if ( $now > $then ) {
             my $resp = $ua->post(
                sprintf( "%s/api2/data/%s?auth=%s&email=%s",
                   $url, $meta->{'key'}, $token, $login->{'email'}),
