@@ -34,6 +34,7 @@ sub setLoginInfo {
 
 sub setToken {
    our ($ua, $url, $token, $login);
+   $ua->agent('SimpleVss/2.0');
    my $content = encode_base64(sprintf("email=%s&password=%s",
       $login->{'email'}, $login->{'password'}));
    my $response =  $ua->post($url . "/api/login", Content => $content);
