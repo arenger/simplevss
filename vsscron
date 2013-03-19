@@ -1,0 +1,17 @@
+#!/bin/bash
+
+
+#if [ -z "$SIMPLEVSS_HOME" ]; then
+#   echo "SIMPLEVSS_HOME not set.\n";
+#   exit 1;
+#fi
+export SIMPLEVSS_HOME=/home/arenger/simplevss
+log=$SIMPLEVSS_HOME/work/log.txt
+
+ts=`date`
+echo "Run at $ts" >> $log
+sec=$(( $RANDOM % 600 ));
+echo "Sleeping for $sec seconds..." >> $log
+sleep $sec
+export SIMPLEVSS_HOME
+exec /usr/bin/perl -I ~/perl5/lib/perl5 $SIMPLEVSS_HOME/simplevss.pl &>> $log
