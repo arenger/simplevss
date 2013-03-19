@@ -14,7 +14,7 @@ our $login;
 our $token;
 
 our %tags = (
-   VSS_TODAY   => 0,
+   &VSS_TODAY  => 0,
    'Vss1Day'   => 86400,
    'Vss3Day'   => 259200,
    'Vss1Week'  => 604800,
@@ -22,13 +22,6 @@ our %tags = (
    'Vss1Month' => 2592000,
    'Vss90Day'  => 7776000
 );
-
-# maybe in future:
-# $index will contain the "data" portion of the response from an index
-# request to the server.  on startup, simplevss loads this from a file
-# and then gets any needed updates to it from the server.  this structure
-# is saved to index.json before the program ends.  it is an array of hashes.
-# our $index;
 
 sub setLoginInfo {
    our $login;
@@ -44,7 +37,6 @@ sub setToken {
    my $content = encode_base64(sprintf("email=%s&password=%s",
       $login->{'email'}, $login->{'password'}));
    my $response =  $ua->post($url . "/api/login", Content => $content);
-
    if ($response->content =~ /Invalid argument/) {
       die "Problem connecting to web server.\n".
           "Is Crypt:SSLeay installed?\n";
@@ -75,31 +67,34 @@ sub getNoteIndex {
 
 sub tagNotes() {
    our ($ua, $url, $token, $login, %tags);
-   my $now = time();
    my $index = getNoteIndex();
+   my $now = time();
    for my $meta (@$index) {
       #printf("checking %s\n",$meta->{'key'});
-      my %tagSubset;
+      my @tagSubset = ();
+      my $alreadyToday = 0;
       for my $tag (@{$meta->{'tags'}}) {
-         next if !$tags{$tag};
-         #printf("  has tag: $tag\n");
-         $tagSubset{$tag} = 1;
+         if (exists($tags{$tag})) {
+            push @tagSubset, $tag;
+            if ($tag eq &VSS_TODAY) {
+               $alreadyToday = 1;
+               last;
+            }
+         }
       }
-      next if $tagSubset{VSS_TODAY};
-      for my $tag (keys(%tagSubset)) {
+      next if $alreadyToday;
+      for my $tag (@tagSubset) {
          my $then = $meta->{'modifydate'};
          $then -= ($then % 86400);
          $then += $tags{$tag};
          if ( $now > $then ) {
-            my $resp = $ua->post(
+            $ua->post(
                sprintf( "%s/api2/data/%s?auth=%s&email=%s",
                   $url, $meta->{'key'}, $token, $login->{'email'}),
-               # not yet supporting the preservation of unrelated tags,
-               # and/or multiple frequencies if that would even make sense -
+               # not yet supporting the preservation of unrelated tags -
                Content => sprintf('{"modifydate":"%s","tags":["%s","%s"]}',
-                  $now, $tag, VSS_TODAY)
+                  $now, $tag, &VSS_TODAY)
             );
-            #print "modifed: ".$resp->content."\n";
             printf("modified: %s\n",$meta->{'key'});
          }
       }
@@ -107,7 +102,6 @@ sub tagNotes() {
 }
 
 #main
-print "begin main\n";
 if (@ARGV != 1) {
    print "usage: $0 login.json\n";
    exit 1;
@@ -115,4 +109,3 @@ if (@ARGV != 1) {
 setLoginInfo($ARGV[0]);
 setToken();
 tagNotes();
-print "end main\n";
