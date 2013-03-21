@@ -86,6 +86,7 @@ sub tagNotes() {
       next if $alreadyToday;
       for my $tag (@tagSubset) {
          my $then = $meta->{'modifydate'};
+         $then -= 21600; #UTC->MDT
          $then -= ($then % 86400);
          $then += $tags{$tag};
          if ( $now > $then ) {
