@@ -23,17 +23,18 @@ our %tags = (
    'Vss90Day'  => 7776000
 );
 
-sub setLoginInfo {
-   our $login;
+sub getAccounts {
+   our @accounts;
    my $authfile = shift;
    open( L , '<' , $authfile ) or die;
-   $login = decode_json(join('',<L>));
+   my $info = decode_json(join('',<L>));
    close( L );
-   if ( !$login->{'email'} || !$login->{'password'} ) { die; }
+   return @{$info->{'accounts'}};
 }
 
 sub setToken {
    our ($ua, $url, $token, $login);
+   if ( !$login->{'email'} || !$login->{'password'} ) { die; }
    $ua->agent('SimpleVss/2.0');
    my $content = encode_base64(sprintf("email=%s&password=%s",
       $login->{'email'}, $login->{'password'}));
@@ -71,11 +72,12 @@ sub tagNotes() {
    my $index = getNoteIndex();
    my $now = time();
    for my $meta (@$index) {
-      #printf("checking %s\n",$meta->{'key'});
+      # printf("checking %s\n",$meta->{'key'});
       my @tagSubset = ();
       my $alreadyToday = 0;
       for my $tag (@{$meta->{'tags'}}) {
          if (exists($tags{$tag})) {
+            # printf("   $tag\n");
             push @tagSubset, $tag;
             if ($tag eq &VSS_TODAY) {
                $alreadyToday = 1;
@@ -97,7 +99,7 @@ sub tagNotes() {
                Content => sprintf('{"modifydate":"%s","tags":["%s","%s"]}',
                   $now, $tag, &VSS_TODAY)
             );
-            printf("modified: %s\n",$meta->{'key'});
+            # printf("modified: %s\n",$meta->{'key'});
          }
       }
    }
@@ -105,9 +107,11 @@ sub tagNotes() {
 
 #main
 if (@ARGV != 1) {
-   print "usage: $0 login.json\n";
+   print "usage: $0 accounts.json\n";
    exit 1;
 }
-setLoginInfo($ARGV[0]);
-setToken();
-tagNotes();
+for $login (getAccounts($ARGV[0])) {
+   setToken();
+   tagNotes();
+   sleep 67;
+}
